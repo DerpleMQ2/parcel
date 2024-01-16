@@ -33,5 +33,6 @@ jobs:
           artifacts: "init.lua,lib/*"
           tag_name: release-v${{ github.run_number }}
           release_name: Release release-v${{ github.run_number }}
+          commit: main
           draft: false
           prerelease: false
