@@ -21,8 +21,9 @@ jobs:
         with:
           # Repository to checkout
           repository: DerpleMQ2/bfo_lib.git
+          branch: main
           # Move repository content to specified path
-          path: bfo_parcel/lib
+          path: lib
       - name: Create Release
         if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged)
         uses: actions/create-release@v1
