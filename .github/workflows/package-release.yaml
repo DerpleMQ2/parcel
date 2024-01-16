@@ -20,7 +20,7 @@ jobs:
         uses:  actions/checkout@v4
         with:
           # Repository to checkout
-          repository: https://github.com/DerpleMQ2/bfo_lib.git
+          repository: DerpleMQ2/bfo_lib.git
           # Move repository content to specified path
           path: bfo_parcel/lib
       - name: Create Release
