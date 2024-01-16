@@ -20,7 +20,7 @@ jobs:
         uses:  actions/checkout@v4
         with:
           # Repository to checkout
-          repository: DerpleMQ2/bfo_lib.git
+          repository: DerpleMQ2/bfo_lib
           token: ${{ secrets.GITHUB_TOKEN }}
           # Move repository content to specified path
           path: lib
