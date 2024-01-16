@@ -17,7 +17,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v2
       - name: Checkout library for packaging
-         run: gh release download --repo https://github.com/DerpleMQ2/bfo_lib.git v1
+        run: gh release download --repo https://github.com/DerpleMQ2/bfo_lib.git v1
 
       # Additional steps like build or test
 
