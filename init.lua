@@ -94,6 +94,7 @@ local function get_items_in_bag(bagName)
     status = "Idle..."
 end
 
+-- TODO: Update this to be able to find items with various attributes
 local function get_all_ts_items()
     status = "Loading TS Items..."
     items = {}
@@ -117,7 +118,7 @@ end
 
 local function findParcelVendor()
     status = "Finding Nearest Parcel Vendor"
-    local parcelSpawns = mq.getFilteredSpawns(function(spawn) return string.find(spawn.Surname(), "Parcels") end)
+    local parcelSpawns = mq.getFilteredSpawns(function(spawn) return string.find(spawn.Surname(), "Parcels") ~= nil end)
 
     if #parcelSpawns <= 0 then
         --print("\arNo Parcel Vendor Found in Zone!")
