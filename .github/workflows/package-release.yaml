@@ -21,7 +21,7 @@ jobs:
         with:
           # Repository to checkout
           repository: DerpleMQ2/bfo_lib.git
-          branch: main
+          token: ${{ secrets.GITHUB_TOKEN }}
           # Move repository content to specified path
           path: lib
       - name: Create Release
