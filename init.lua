@@ -1,116 +1,33 @@
-local mq = require('mq')
-require('lib/bfoutils')
-local LIP = require('lib/LIP')
-require('lib/ed/utils')
-local ICONS = require('mq.Icons')
-local ImGui = require('ImGui')
+local mq                = require('mq')
+local ICONS             = require('mq.Icons')
+local ImGui             = require('ImGui')
+local parcelInv         = require('parcel_inv')
 
-local openGUI = false
-local shouldDrawGUI = false
+local openGUI           = false
+local shouldDrawGUI     = false
 
-local terminate = false
+local terminate         = false
 
-local parcelTarget = ""
-local startParcel = false
-local parcelTSItems = false
+local parcelTarget      = ""
+local startParcel       = false
+local parcelTSItems     = false
 
-local animItems = mq.FindTextureAnimation("A_DragItem")
-local bagIndex = 0
-local currentSendItemIdx = 1
+local animItems         = mq.FindTextureAnimation("A_DragItem")
 
-local status = "Idle..."
+local status            = "Idle..."
+local bagIndex          = 1
+local nearestVendor     = nil
 
-local config_dir = mq.TLO.MacroQuest.Path():gsub('\\', '/')
-local parcel_settings_file = '/lua/parcel/config/parcel.ini'
-local parcel_settings_path = config_dir .. parcel_settings_file
-
-local parcelSettings = {}
-
-local LoadSettings = function()
-    CharConfig = mq.TLO.Me.CleanName()
-
-    if file_exists(parcel_settings_path) then
-        parcelSettings = LIP.load(parcel_settings_path)
-    end
-end
-
-local nearestVendor = nil
-local bags = {}
-local bagNames = {}
-
----@type table<any>
-local items = {}
-
-local function create_container_inventory()
-    bags = {}
-    bagNames = {}
-
-    for i = 23, 34, 1 do
-        local slot = mq.TLO.Me.Inventory(i)
-        if slot.Container() and slot.Container() > 0 then
-            local bagName = string.format("%s (%d)", slot.Name(), slot.ItemSlot())
-            bags[bagName] = slot
-            table.insert(bagNames, bagName)
-        end
-    end
-end
-
--- Converts between ItemSlot and /itemnotify pack numbers
-local function to_pack(slot_number)
-    return "pack" .. tostring(slot_number - 22)
-end
-
--- Converts between ItemSlot2 and /itemnotify numbers
-local function to_bag_slot(slot_number)
-    return slot_number + 1
-end
-
-local function get_items_in_bag(bagName)
-    if not bagName then return end
-
-    status = "Loading Bag Items..."
-
-    local slot = bags[bagName]
-    items = {}
-    for j = 1, (slot.Container()), 1 do
-        if (slot.Item(j)() and not slot.Item(j).NoDrop() and not slot.Item(j).NoRent()) then
-            table.insert(items, { Item = slot.Item(j), Sent = ICONS.MD_CLOUD_QUEUE })
-        end
-    end
-
-    currentSendItemIdx = 1
-
-    status = "Idle..."
-end
-
--- TODO: Update this to be able to find items with various attributes
-local function get_all_ts_items()
-    status = "Loading TS Items..."
-    items = {}
-    for i = 23, 34, 1 do
-        local slot = mq.TLO.Me.Inventory(i)
-        if slot.Container() and slot.Container() > 0 then
-            for j = 1, (slot.Container()), 1 do
-                if (slot.Item(j)() and not slot.Item(j).NoDrop() and not slot.Item(j).NoRent() and slot.Item(j).Tradeskills() and slot.Item(j).Stackable()) then
-                    table.insert(items, { Item = slot.Item(j), Sent = ICONS.MD_CLOUD_QUEUE })
-                end
-            end
-        else
-            if (slot() and not slot.NoDrop() and not slot.NoRent() and slot.Tradeskills() and slot.Stackable()) then
-                table.insert(items, { Item = slot, Sent = ICONS.MD_CLOUD_QUEUE })
-            end
-        end
-    end
-
-    status = "Idle..."
-end
+local ColumnID_ItemIcon = 0
+local ColumnID_Item     = 1
+local ColumnID_Sent     = 2
+local ColumnID_LAST     = ColumnID_Sent + 1
 
 local function findParcelVendor()
     status = "Finding Nearest Parcel Vendor"
     local parcelSpawns = mq.getFilteredSpawns(function(spawn) return string.find(spawn.Surname(), "Parcels") ~= nil end)
 
     if #parcelSpawns <= 0 then
-        --print("\arNo Parcel Vendor Found in Zone!")
         status = "Idle..."
         return nil
     end
@@ -204,57 +121,46 @@ local function doParceling()
         return
     end
 
-    -- send an item
-    if currentSendItemIdx > #items then
-        currentSendItemIdx = 1
+    local item = parcelInv:getNextItem()
+    if item then
+        if item.Sent == ICONS.MD_CLOUD_DONE then
+            return
+        end
+
+        status = string.format("Sending: %s", item["Item"].Name())
+
+        mq.cmd("/itemnotify in " ..
+            parcelInv.toPack(item["Item"].ItemSlot()) .. " " .. parcelInv.toBagSlot(item["Item"].ItemSlot2()) .. " leftmouseup")
+
+        repeat
+            mq.delay(10)
+        until mq.TLO.Window("MerchantWnd").Child("MW_Send_Button")() == "TRUE" and mq.TLO.Window("MerchantWnd").Child("MW_Send_Button").Enabled()
+
+        item.Sent = ICONS.MD_CLOUD_UPLOAD
+
+        mq.cmd("/shift /notify MerchantWnd MW_Send_Button leftmouseup")
+
+        item.Sent = ICONS.MD_CLOUD_DONE
+    else
         startParcel = false
         status = "Idle..."
-        return
     end
-
-    local item = items[currentSendItemIdx]
-    currentSendItemIdx = currentSendItemIdx + 1
-
-    if item["Sent"] == ICONS.MD_CLOUD_DONE then
-        return
-    end
-
-    status = string.format("Sending: %s", item["Item"].Name())
-
-    mq.cmd("/itemnotify in " ..
-        to_pack(item["Item"].ItemSlot()) .. " " .. to_bag_slot(item["Item"].ItemSlot2()) .. " leftmouseup")
-
-    repeat
-        mq.delay(10)
-    until mq.TLO.Window("MerchantWnd").Child("MW_Send_Button")() == "TRUE" and mq.TLO.Window("MerchantWnd").Child("MW_Send_Button").Enabled()
-
-    item["Sent"] = ICONS.MD_CLOUD_UPLOAD
-
-    mq.cmd("/shift /notify MerchantWnd MW_Send_Button leftmouseup")
-
-    item["Sent"] = ICONS.MD_CLOUD_DONE
 end
-
-local ColumnID_ItemIcon = 0
-local ColumnID_Item = 1
-local ColumnID_Sent = 2
-local ColumnID_LAST = ColumnID_Sent + 1
 
 local function renderItems()
     ImGui.Text("Items to Send:")
     if ImGui.BeginTable("BagItemList", ColumnID_LAST, bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Borders)) then
-        ImGui.PushStyleColor(ImGuiCol.Text, 255, 0, 255, 1)
-        ImGui.TableSetupColumn('Icon', (ImGuiTableColumnFlags.NoSort), 20.0, ColumnID_ItemIcon)
-        ImGui.TableSetupColumn('Item',
-            bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.PreferSortDescending, ImGuiTableColumnFlags.WidthFixed),
-            300.0, ColumnID_Item)
-        ImGui.TableSetupColumn('Sent', (ImGuiTableColumnFlags.NoSort), 20.0, ColumnID_Sent)
+        ImGui.PushStyleColor(ImGuiCol.Text, 0.8, 0, 1.0, 1)
+        ImGui.TableSetupColumn('Icon', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0, ColumnID_ItemIcon)
+        ImGui.TableSetupColumn('Item', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.PreferSortDescending, ImGuiTableColumnFlags.WidthStretch),
+            150.0, ColumnID_Item)
+        ImGui.TableSetupColumn('Sent', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0, ColumnID_Sent)
         ImGui.PopStyleColor()
         ImGui.TableHeadersRow()
         --ImGui.TableNextRow()
 
-        for _, item in ipairs(items) do
-            local currentItem = item["Item"]
+        for _, item in ipairs(parcelInv.items) do
+            local currentItem = item.Item
             ImGui.TableNextColumn()
             animItems:SetTextureCell((tonumber(currentItem.Icon()) or 500) - 500)
             ImGui.DrawTextureAnimation(animItems, 20, 20)
@@ -263,7 +169,7 @@ local function renderItems()
                 currentItem.Inspect()
             end
             ImGui.TableNextColumn()
-            ImGui.Text(item["Sent"])
+            ImGui.Text(item.Sent)
         end
 
         ImGui.EndTable()
@@ -302,15 +208,19 @@ local function parcelGUI()
             if not parcelTSItems then
                 ImGui.Text("Select Bag: ")
                 ImGui.SameLine()
-                bagIndex, pressed = ImGui.Combo("##Select Bag", bagIndex, bagNames, #bagNames)
+                bagIndex, pressed = ImGui.Combo("##Select Bag", bagIndex, parcelInv.bagNames, #parcelInv.bagNames)
                 if pressed then
-                    get_items_in_bag(bagNames[bagIndex])
+                    status = "Loading Bag Items..."
+                    parcelInv:getItemsInBag(bagIndex)
+                    status = "Idle..."
                 end
                 ImGui.SameLine()
 
                 if ImGui.SmallButton(ICONS.MD_REFRESH) then
-                    create_container_inventory()
-                    get_items_in_bag(bagNames[bagIndex])
+                    status = "Loading Bag Items..."
+                    parcelInv:createContainerInventory()
+                    parcelInv:getItemsInBag(bagIndex)
+                    status = "Idle..."
                 end
 
                 ImGui.Text("Or")
@@ -321,10 +231,14 @@ local function parcelGUI()
             parcelTSItems, pressed = ImGui.Checkbox("##ts_chk", parcelTSItems)
             if pressed then
                 if not parcelTSItems then
-                    create_container_inventory()
-                    get_items_in_bag(bagNames[bagIndex])
+                    status = "Loading Bag Items..."
+                    parcelInv:createContainerInventory()
+                    parcelInv:getItemsInBag(bagIndex)
+                    status = "Idle..."
                 else
-                    get_all_ts_items()
+                    status = "Loading TS Items..."
+                    parcelInv:getFilteredItems(function(item) return item.TradeSkills() end)
+                    status = "Idle..."
                 end
             end
 
@@ -334,10 +248,10 @@ local function parcelGUI()
 
             ImGui.Separator()
 
-            if #items > 0 and parcelTarget:len() >= 4 then
+            if #parcelInv.items > 0 and parcelTarget:len() >= 4 then
                 if ImGui.Button(startParcel and "Cancel" or "Send", 150, 25) then
                     startParcel = not startParcel
-                    currentSendItemIdx = 1
+                    parcelInv:resetState()
                 end
             end
 
@@ -355,13 +269,11 @@ mq.bind("/parcel", function()
 end
 )
 
-LoadSettings()
-
 findParcelVendor()
 
-create_container_inventory()
+parcelInv:createContainerInventory()
 
-print("\ayBFO Parcel tool loaded! Use \ag/parcel\ay to open UI!")
+print("\aw>>> \ayBFO Parcel tool loaded! Use \at/parcel\ay to open UI!")
 
 while not terminate do
     if mq.TLO.MacroQuest.GameState() ~= "INGAME" then return end
@@ -369,5 +281,5 @@ while not terminate do
     doParceling()
 
     mq.doevents()
-    mq.delay(400) -- equivalent to '400ms'
+    mq.delay(400)
 end
