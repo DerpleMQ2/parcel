@@ -4,17 +4,6 @@ local LIP = require('lib/LIP')
 require('lib/ed/utils')
 local ICONS = require('mq.Icons')
 local ImGui = require('ImGui')
-ImGuiCol = ImGuiCol
-ImGuiInputTextFlags = ImGuiInputTextFlags
-ImGuiTableColumnFlags = ImGuiTableColumnFlags
-ImGuiTableFlags = ImGuiTableFlags
-ImGuiSelectableFlags = ImGuiSelectableFlags
-ImGuiButtonFlags = ImGuiButtonFlags
-ImGuiMouseButton = ImGuiMouseButton
-ImGuiTreeNodeFlags = ImGuiTreeNodeFlags
-ImGuiStyleVar = ImGuiStyleVar
-ImVec2 = ImVec2
-bit32 = bit32
 
 local openGUI = false
 local shouldDrawGUI = false
@@ -175,11 +164,11 @@ local function doParceling()
         return
     end
 
-    if not mq.TLO.Nav.Active() and (nearestVendor.Distance() or 0) > 10 then
+    if not mq.TLO.Navigation.Active() and (nearestVendor.Distance() or 0) > 10 then
         gotoParcelVendor()
     end
 
-    if mq.TLO.Nav.Active() and not mq.TLO.Nav.Paused() then
+    if mq.TLO.Navigation.Active() and not mq.TLO.Navigation.Paused() then
         status = string.format("Naving to %s (%d)", nearestVendor.DisplayName(), nearestVendor.Distance())
         return
     end
@@ -253,11 +242,11 @@ local ColumnID_LAST = ColumnID_Sent + 1
 
 local function renderItems()
     ImGui.Text("Items to Send:")
-    if ImGui.BeginTable("BagItemList", ColumnID_LAST, ImGuiTableFlags.Resizable + ImGuiTableFlags.Borders) then
+    if ImGui.BeginTable("BagItemList", ColumnID_LAST, bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Borders)) then
         ImGui.PushStyleColor(ImGuiCol.Text, 255, 0, 255, 1)
         ImGui.TableSetupColumn('Icon', (ImGuiTableColumnFlags.NoSort), 20.0, ColumnID_ItemIcon)
         ImGui.TableSetupColumn('Item',
-            (ImGuiTableColumnFlags.NoSort + ImGuiTableColumnFlags.PreferSortDescending + ImGuiTableColumnFlags.WidthFixed),
+            bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.PreferSortDescending, ImGuiTableColumnFlags.WidthFixed),
             300.0, ColumnID_Item)
         ImGui.TableSetupColumn('Sent', (ImGuiTableColumnFlags.NoSort), 20.0, ColumnID_Sent)
         ImGui.PopStyleColor()
