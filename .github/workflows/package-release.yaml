@@ -14,15 +14,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Checkout main repository
         uses: actions/checkout@v2
-      - name: Checkout library for packaging
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release download --repo https://github.com/DerpleMQ2/bfo_lib.git v1
-
-      # Additional steps like build or test
-
+      - name: Checkout library repositotory
+        uses:  actions/checkout@v4
+        with:
+          # Repository to checkout
+          repository: https://github.com/DerpleMQ2/bfo_lib.git
+          # Move repository content to specified path
+          path: bfo_parcel/lib
       - name: Create Release
         if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged)
         uses: actions/create-release@v1
