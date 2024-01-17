@@ -144,6 +144,7 @@ local function doParceling()
     else
         startParcel = false
         status = "Idle..."
+        parcelInv:resetState()
     end
 end
 
