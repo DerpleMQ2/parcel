@@ -210,7 +210,7 @@ local function parcelGUI()
             ImGui.Separator()
 
             --if not parcelTSItems then
-            ImGui.Text("Select Bag: ")
+            ImGui.Text("Select Items: ")
             ImGui.SameLine()
             sourceIndex, pressed = ImGui.Combo("##Select Bag", sourceIndex, function(idx) return parcelInv.sendSources[idx].name end, #parcelInv.sendSources)
             if pressed then
