@@ -1,28 +1,26 @@
-local mq                    = require('mq')
-local ICONS                 = require('mq.Icons')
-local ImGui                 = require('ImGui')
-local parcelInv             = require('parcel_inv')
+local mq                = require('mq')
+local ICONS             = require('mq.Icons')
+local ImGui             = require('ImGui')
+local parcelInv         = require('parcel_inv')
 
-local openGUI               = false
-local shouldDrawGUI         = false
+local openGUI           = false
+local shouldDrawGUI     = false
 
-local terminate             = false
+local terminate         = false
 
-local parcelTarget          = ""
-local startParcel           = false
-local parcelTSItems         = false
-local parcelCollectionItems = false
+local parcelTarget      = ""
+local startParcel       = false
 
-local animItems             = mq.FindTextureAnimation("A_DragItem")
+local animItems         = mq.FindTextureAnimation("A_DragItem")
 
-local status                = "Idle..."
-local sourceIndex           = 1
-local nearestVendor         = nil
+local status            = "Idle..."
+local sourceIndex       = 1
+local nearestVendor     = nil
 
-local ColumnID_ItemIcon     = 0
-local ColumnID_Item         = 1
-local ColumnID_Sent         = 2
-local ColumnID_LAST         = ColumnID_Sent + 1
+local ColumnID_ItemIcon = 0
+local ColumnID_Item     = 1
+local ColumnID_Sent     = 2
+local ColumnID_LAST     = ColumnID_Sent + 1
 
 local function findParcelVendor()
     status = "Finding Nearest Parcel Vendor"
