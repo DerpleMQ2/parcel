@@ -1,27 +1,28 @@
-local mq                = require('mq')
-local ICONS             = require('mq.Icons')
-local ImGui             = require('ImGui')
-local parcelInv         = require('parcel_inv')
+local mq                    = require('mq')
+local ICONS                 = require('mq.Icons')
+local ImGui                 = require('ImGui')
+local parcelInv             = require('parcel_inv')
 
-local openGUI           = false
-local shouldDrawGUI     = false
+local openGUI               = false
+local shouldDrawGUI         = false
 
-local terminate         = false
+local terminate             = false
 
-local parcelTarget      = ""
-local startParcel       = false
-local parcelTSItems     = false
+local parcelTarget          = ""
+local startParcel           = false
+local parcelTSItems         = false
+local parcelCollectionItems = false
 
-local animItems         = mq.FindTextureAnimation("A_DragItem")
+local animItems             = mq.FindTextureAnimation("A_DragItem")
 
-local status            = "Idle..."
-local bagIndex          = 1
-local nearestVendor     = nil
+local status                = "Idle..."
+local sourceIndex           = 1
+local nearestVendor         = nil
 
-local ColumnID_ItemIcon = 0
-local ColumnID_Item     = 1
-local ColumnID_Sent     = 2
-local ColumnID_LAST     = ColumnID_Sent + 1
+local ColumnID_ItemIcon     = 0
+local ColumnID_Item         = 1
+local ColumnID_Sent         = 2
+local ColumnID_LAST         = ColumnID_Sent + 1
 
 local function findParcelVendor()
     status = "Finding Nearest Parcel Vendor"
@@ -130,7 +131,8 @@ local function doParceling()
         status = string.format("Sending: %s", item["Item"].Name())
 
         mq.cmd("/itemnotify in " ..
-            parcelInv.toPack(item["Item"].ItemSlot()) .. " " .. parcelInv.toBagSlot(item["Item"].ItemSlot2()) .. " leftmouseup")
+            parcelInv.toPack(item["Item"].ItemSlot()) ..
+            " " .. parcelInv.toBagSlot(item["Item"].ItemSlot2()) .. " leftmouseup")
 
         repeat
             mq.delay(10)
@@ -151,10 +153,14 @@ local function renderItems()
     ImGui.Text("Items to Send:")
     if ImGui.BeginTable("BagItemList", ColumnID_LAST, bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Borders)) then
         ImGui.PushStyleColor(ImGuiCol.Text, 0.8, 0, 1.0, 1)
-        ImGui.TableSetupColumn('Icon', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0, ColumnID_ItemIcon)
-        ImGui.TableSetupColumn('Item', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.PreferSortDescending, ImGuiTableColumnFlags.WidthStretch),
+        ImGui.TableSetupColumn('Icon', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0,
+            ColumnID_ItemIcon)
+        ImGui.TableSetupColumn('Item',
+            bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.PreferSortDescending,
+                ImGuiTableColumnFlags.WidthStretch),
             150.0, ColumnID_Item)
-        ImGui.TableSetupColumn('Sent', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0, ColumnID_Sent)
+        ImGui.TableSetupColumn('Sent', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0,
+            ColumnID_Sent)
         ImGui.PopStyleColor()
         ImGui.TableHeadersRow()
         --ImGui.TableNextRow()
@@ -205,41 +211,22 @@ local function parcelGUI()
 
             ImGui.Separator()
 
-            if not parcelTSItems then
-                ImGui.Text("Select Bag: ")
-                ImGui.SameLine()
-                bagIndex, pressed = ImGui.Combo("##Select Bag", bagIndex, parcelInv.bagNames, #parcelInv.bagNames)
-                if pressed then
-                    status = "Loading Bag Items..."
-                    parcelInv:getItemsInBag(bagIndex)
-                    status = "Idle..."
-                end
-                ImGui.SameLine()
-
-                if ImGui.SmallButton(ICONS.MD_REFRESH) then
-                    status = "Loading Bag Items..."
-                    parcelInv:createContainerInventory()
-                    parcelInv:getItemsInBag(bagIndex)
-                    status = "Idle..."
-                end
-
-                ImGui.Text("Or")
-            end
-
-            ImGui.Text("Send all TS Items: ")
+            --if not parcelTSItems then
+            ImGui.Text("Select Bag: ")
             ImGui.SameLine()
-            parcelTSItems, pressed = ImGui.Checkbox("##ts_chk", parcelTSItems)
+            sourceIndex, pressed = ImGui.Combo("##Select Bag", sourceIndex, function(idx) return parcelInv.sendSources[idx].name end, #parcelInv.sendSources)
             if pressed then
-                if not parcelTSItems then
-                    status = "Loading Bag Items..."
-                    parcelInv:createContainerInventory()
-                    parcelInv:getItemsInBag(bagIndex)
-                    status = "Idle..."
-                else
-                    status = "Loading TS Items..."
-                    parcelInv:getFilteredItems(function(item) return item.TradeSkills() end)
-                    status = "Idle..."
-                end
+                status = "Loading Bag Items..."
+                parcelInv:getItems(sourceIndex)
+                status = "Idle..."
+            end
+            ImGui.SameLine()
+
+            if ImGui.SmallButton(ICONS.MD_REFRESH) then
+                status = "Loading Bag Items..."
+                parcelInv:createContainerInventory()
+                parcelInv:getItems(sourceIndex)
+                status = "Idle..."
             end
 
             ImGui.Separator()
@@ -272,6 +259,7 @@ end
 findParcelVendor()
 
 parcelInv:createContainerInventory()
+parcelInv:getItems(sourceIndex)
 
 print("\aw>>> \ayBFO Parcel tool loaded! Use \at/parcel\ay to open UI!")
 
