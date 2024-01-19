@@ -102,10 +102,11 @@ local function doParceling()
         return
     end
 
-    if mq.TLO.Window("MerchantWnd").Child("MW_MerchantSubWindows").CurrentTabIndex() ~= 3 then
+    local tabPage = mq.TLO.Window("MerchantWnd").Child("MW_MerchantSubWindows")
+    if tabPage.CurrentTab.Name() ~= "MW_MailPage" then
         status = "Selecting Parcel Tab..." ..
-            tostring(mq.TLO.Window("MerchantWnd").Child("MW_MerchantSubWindows").CurrentTabIndex())
-        mq.TLO.Window("MerchantWnd").Child("MW_MerchantSubWindows").SetCurrentTab(3)
+            tostring(tabPage.CurrentTabIndex())
+        tabPage.SetCurrentTab(tabPage.CurrentTabIndex() + 1)
         return
     end
 
