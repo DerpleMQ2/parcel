@@ -19,12 +19,13 @@ local nearestVendor     = nil
 
 local ColumnID_ItemIcon = 0
 local ColumnID_Item     = 1
-local ColumnID_Sent     = 2
+local ColumnID_Remove   = 2
+local ColumnID_Sent     = 3
 local ColumnID_LAST     = ColumnID_Sent + 1
 
 local function findParcelVendor()
     status = "Finding Nearest Parcel Vendor"
-    local parcelSpawns = mq.getFilteredSpawns(function(spawn) return string.find(spawn.Surname(), "Parcels") ~= nil end)
+    local parcelSpawns = mq.getFilteredSpawns(function(spawn) return (string.find(spawn.Surname(), "Parcels") ~= nil) or (string.find(spawn.Surname(), "Parcel Services") ~= nil) end)
 
     if #parcelSpawns <= 0 then
         status = "Idle..."
@@ -158,13 +159,15 @@ local function renderItems()
             bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.PreferSortDescending,
                 ImGuiTableColumnFlags.WidthStretch),
             150.0, ColumnID_Item)
+        ImGui.TableSetupColumn('', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0,
+            ColumnID_Remove)
         ImGui.TableSetupColumn('Sent', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0,
             ColumnID_Sent)
         ImGui.PopStyleColor()
         ImGui.TableHeadersRow()
         --ImGui.TableNextRow()
 
-        for _, item in ipairs(parcelInv.items) do
+        for idx, item in ipairs(parcelInv.items) do
             local currentItem = item.Item
             ImGui.TableNextColumn()
             animItems:SetTextureCell((tonumber(currentItem.Icon()) or 500) - 500)
@@ -173,6 +176,14 @@ local function renderItems()
             if ImGui.Selectable(currentItem.Name(), false, 0) then
                 currentItem.Inspect()
             end
+            ImGui.TableNextColumn()
+            ImGui.PushStyleColor(ImGuiCol.Text, 0.8, 0.02, 0.02, 1.0)
+            ImGui.PushID("#_btn_" .. tostring(idx))
+            if ImGui.Selectable(ICONS.MD_REMOVE_CIRCLE_OUTLINE) then
+                table.remove(parcelInv.items, idx)
+            end
+            ImGui.PopID()
+            ImGui.PopStyleColor()
             ImGui.TableNextColumn()
             ImGui.Text(item.Sent)
         end
