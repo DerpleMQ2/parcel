@@ -54,7 +54,7 @@ local function gotoParcelVendor()
 
     print(string.format("\atFound parcel vendor: \am%s", spawn.DisplayName()))
 
-    mq.cmdf("/nav id %d", spawn.ID())
+    mq.cmdf("/nav id %d | distance=15", spawn.ID())
 end
 
 
