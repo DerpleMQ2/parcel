@@ -2,6 +2,7 @@ local mq                = require('mq')
 local ICONS             = require('mq.Icons')
 local ImGui             = require('ImGui')
 local parcelInv         = require('parcel_inv')
+local actors            = require 'actors'
 
 local openGUI           = false
 local shouldDrawGUI     = false
@@ -36,14 +37,23 @@ local function has_value(tab, val)
     return false
 end
 
+local Output = function(msg, ...)
+    local formatted = msg
+    if ... then
+        formatted = string.format(msg, ...)
+    end
+    printf('\aw[' .. mq.TLO.Time() .. '] [\aoBFO Parcel\aw] ::\a-t %s', formatted)
+end
+
 local function SaveSettings()
     mq.pickle(settings_file, settings)
+    actors.send({ from = mq.TLO.Me.DisplayName(), script = "BFOParcel", event = "SaveSettings", })
 end
 
 local function LoadSettings()
     local config, err = loadfile(settings_file)
     if err or not config then
-        printf("\ayNo valid configuration found. Creating a new one: %s", settings_file)
+        Output("\ayNo valid configuration found. Creating a new one: %s", settings_file)
         settings = {}
         SaveSettings()
     else
@@ -84,7 +94,7 @@ local function gotoParcelVendor()
 
     status = "Naving to Parcel Vendor: " .. spawn.DisplayName()
 
-    print(string.format("\atFound parcel vendor: \am%s", spawn.DisplayName()))
+    Output("\atFound parcel vendor: \am%s", spawn.DisplayName())
 
     mq.cmdf("/nav id %d | distance=10", spawn.ID())
 end
@@ -95,7 +105,7 @@ local function targetParcelVendor()
 
     if not spawn then return end
 
-    print(string.format("\atFound parcel vendor: \am%s", spawn.DisplayName()))
+    Output("\atFound parcel vendor: \am%s", spawn.DisplayName())
 
     mq.cmdf("/target id %d", spawn.ID())
 end
@@ -114,7 +124,7 @@ local function doParceling()
     end
 
     if not nearestVendor then
-        print("\arNo Parcel Vendor found in zone!")
+        Output("\arNo Parcel Vendor found in zone!")
         startParcel = false
         return
     end
@@ -338,7 +348,27 @@ findParcelVendor()
 parcelInv:createContainerInventory()
 parcelInv:getItems(sourceIndex)
 
-print("\aw>>> \ayBFO Parcel tool loaded! Use \at/parcel\ay to open UI!")
+Output("\aw>>> \ayBFO Parcel tool loaded! Use \at/parcel\ay to open UI!")
+
+-- Global Messaging callback
+---@diagnostic disable-next-line: unused-local
+local script_actor = actors.register(function(message)
+    local msg = message()
+
+    if msg["from"] == mq.TLO.Me.DisplayName() then
+        return
+    end
+    if msg["script"] ~= "BFOParcel" then
+        return
+    end
+
+    ---@diagnostic disable-next-line: redundant-parameter
+    Output("\ayGot Event from(\am%s\ay) event(\at%s\ay)", msg["from"], msg["event"])
+
+    if msg["event"] == "SaveSettings" then
+        LoadSettings()
+    end
+end)
 
 while not terminate do
     if mq.TLO.MacroQuest.GameState() ~= "INGAME" then return end
