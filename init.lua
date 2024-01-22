@@ -24,6 +24,7 @@ local ColumnID_Remove   = 2
 local ColumnID_Sent     = 3
 local ColumnID_LAST     = ColumnID_Sent + 1
 local settings_file     = mq.configDir .. "/parcel.lua"
+local custom_sources    = mq.configDir .. "/parcel_sources.lua"
 
 local settings          = {}
 
@@ -60,7 +61,13 @@ local function LoadSettings()
         settings = config()
     end
 
-    parcelInv = parcelInv:new(settings.CustomSources)
+    local customSources = {}
+    local config, err = loadfile(custom_sources)
+    if not err and config then
+        customSources = config()
+    end
+
+    parcelInv = parcelInv:new(customSources)
 end
 
 local function findParcelVendor()
