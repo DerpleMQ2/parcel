@@ -146,8 +146,10 @@ local function doParceling()
         mq.TLO.Window("MerchantWnd").Child("MW_Send_To_Edit").SetText(parcelTarget)
 
         settings.History = settings.History or {}
-        table.insert(settings.History, parcelTarget)
-        SaveSettings()
+        if not has_value(settings.History, parcelTarget) then
+            table.insert(settings.History, parcelTarget)
+            SaveSettings()
+        end
         return
     end
 
