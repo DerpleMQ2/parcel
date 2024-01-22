@@ -73,7 +73,7 @@ end
 local function findParcelVendor()
     status = "Finding Nearest Parcel Vendor"
     local parcelSpawns = mq.getFilteredSpawns(function(spawn)
-        return (string.find(spawn.Surname(), "Parcels") ~= nil) or
+        return (string.find(spawn.Surname(), "Parcel") ~= nil) or
             (string.find(spawn.Surname(), "Parcel Services") ~= nil) or
             (string.find(spawn.Name(), "Postmaster") ~= nil)
     end)
