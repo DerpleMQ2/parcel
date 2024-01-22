@@ -27,20 +27,14 @@ parcel_inv.genericSources     = {
 parcel_inv.customSources      = {}
 
 --[[
-    Sample Custom Source in config/parcel.lua
+    Sample Custom Source in config/parcel_sources.lua
 
 return {
-    ['History'] = {
-        *** LEAVE THIS PART ALONE ***
-    },
-    ['CustomSources'] =
     {
-        {
-            name = "Tradable Armor",
-            filter = function(item)
-                return item.Type() == "Armor"
-            end,
-        },
+        name = "Tradable Armor",
+        filter = function(item)
+            return item.Type() == "Armor"
+        end,
     },
 }
 ]]
