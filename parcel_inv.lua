@@ -7,28 +7,61 @@ parcel_inv.sendSources        = {}
 parcel_inv.items              = {}
 parcel_inv.currentSendItemIdx = 0
 
+local inventoryOffset         = 22
+
 parcel_inv.genericSources     = {
     {
         name = "All TS Items",
         filter = function(item)
-            return item.Tradeskills()
+            return item.Tradeskills() and item.Stackable()
         end,
     },
     {
         name = "All Collectible Items",
         filter = function(item)
-            return item.Collectible()
+            return item.Collectible() and item.Stackable()
         end,
     },
 }
 
+parcel_inv.customSources      = {}
+
+--[[
+    Sample Custom Source in config/parcel.lua
+
+return {
+    ['History'] = {
+        *** LEAVE THIS PART ALONE ***
+    },
+    ['CustomSources'] =
+    {
+        {
+            name = "Tradable Armor",
+            filter = function(item)
+                return item.Type() == "Armor"
+            end,
+        },
+    },
+}
+]]
+
+---@param additionalSource table
+---@return table
+function parcel_inv:new(additionalSource)
+    local newInv = setmetatable({}, self)
+    self.__index = self
+    newInv.customSources = additionalSource or {}
+    return newInv
+end
+
 function parcel_inv:createContainerInventory()
     self.sendSources = self.genericSources
+    for _, v in ipairs(self.customSources) do table.insert(self.sendSources, v) end
 
     for i = 23, 34, 1 do
         local slot = mq.TLO.Me.Inventory(i)
         if slot.Container() and slot.Container() > 0 then
-            local bagName = string.format("%s (%d)", slot.Name(), slot.ItemSlot())
+            local bagName = string.format("%s (%d)", slot.Name(), slot.ItemSlot() - inventoryOffset)
             table.insert(self.sendSources, { name = bagName, slot = slot, })
         end
     end
@@ -65,13 +98,13 @@ function parcel_inv:getFilteredItems(filterFn)
         local slot = mq.TLO.Me.Inventory(i)
         if slot.Container() and slot.Container() > 0 then
             for j = 1, (slot.Container()), 1 do
-                if (slot.Item(j)() and not slot.Item(j).NoDrop() and not slot.Item(j).NoRent() and slot.Item(j).Stackable()) and
+                if (slot.Item(j)() and not slot.Item(j).NoDrop() and not slot.Item(j).NoRent()) and
                     filterFn(slot.Item(j)) then
                     table.insert(self.items, { Item = slot.Item(j), Sent = ICONS.MD_CLOUD_QUEUE, })
                 end
             end
         else
-            if (slot() and not slot.NoDrop() and not slot.NoRent() and slot.Stackable()) and
+            if (slot() and not slot.NoDrop() and not slot.NoRent()) and
                 filterFn(slot) then
                 table.insert(self.items, { Item = slot, Sent = ICONS.MD_CLOUD_QUEUE, })
             end

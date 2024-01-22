@@ -59,6 +59,8 @@ local function LoadSettings()
     else
         settings = config()
     end
+
+    parcelInv = parcelInv:new(settings.CustomSources)
 end
 
 local function findParcelVendor()
