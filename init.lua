@@ -19,17 +19,47 @@ local nearestVendor     = nil
 
 local ColumnID_ItemIcon = 0
 local ColumnID_Item     = 1
-local ColumnID_Remove   = 2
-local ColumnID_Sent     = 3
+local ColumnID_Sent     = 2
 local ColumnID_LAST     = ColumnID_Sent + 1
+
+local history = {}
+
+local function has_value (tab, val)
+    for index, value in ipairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function read_history()
+    local tmpstr = mq.TLO.Ini('parcel.ini', 'history')()
+    if tmpstr ~= nil then
+        for key in string.gmatch(tmpstr, "[^|]+") do
+            if key ~= mq.TLO.Me.CleanName() then
+                if has_value(history,key) == false then
+                    table.insert(history,key)
+                end
+            end
+        end
+    end
+
+    table.sort(history)
+    table.insert(history,mq.TLO.Me.CleanName())
+end
 
 local function findParcelVendor()
     status = "Finding Nearest Parcel Vendor"
     local parcelSpawns = mq.getFilteredSpawns(function(spawn) return (string.find(spawn.Surname(), "Parcels") ~= nil) or (string.find(spawn.Surname(), "Parcel Services") ~= nil) end)
 
     if #parcelSpawns <= 0 then
-        status = "Idle..."
-        return nil
+        parcelSpawns = mq.getFilteredSpawns(function(spawn) return (string.find(spawn.Name(), "Postmaster") ~= nil) or (string.find(spawn.Surname(), "Parcel Services") ~= nil) end)
+        if #parcelSpawns <= 0 then
+            status = "Idle..."
+            return nil
+        end
     end
 
     local dist = 999999
@@ -54,7 +84,7 @@ local function gotoParcelVendor()
 
     print(string.format("\atFound parcel vendor: \am%s", spawn.DisplayName()))
 
-    mq.cmdf("/nav id %d | distance=15", spawn.ID())
+    mq.cmdf("/nav id %d | distance=10", spawn.ID())
 end
 
 
@@ -102,20 +132,26 @@ local function doParceling()
         return
     end
 
-    local tabPage = mq.TLO.Window("MerchantWnd").Child("MW_MerchantSubWindows")
-    if tabPage.CurrentTab.Name() ~= "MW_MailPage" then
-        status = "Selecting Parcel Tab..." ..
-            tostring(tabPage.CurrentTabIndex())
-        tabPage.SetCurrentTab(tabPage.CurrentTabIndex() + 1)
-        return
+    if mq.TLO.Window("MerchantWnd").Child("MW_MerchantSubWindows").TabCount() == 3 then
+        if mq.TLO.Window("MerchantWnd").Child("MW_MerchantSubWindows").CurrentTabIndex() ~= 3 then
+            status = "Selecting Parcel Tab..." ..
+                tostring(mq.TLO.Window("MerchantWnd").Child("MW_MerchantSubWindows").CurrentTabIndex())
+                mq.TLO.Window("MerchantWnd").Child("MW_MerchantSubWindows").SetCurrentTab(3)
+            return
+        end
     end
 
     if mq.TLO.Window("MerchantWnd").Child("MW_Send_To_Edit").Text() ~= parcelTarget then
         status = "Setting Name to send to..."
         mq.TLO.Window("MerchantWnd").Child("MW_Send_To_Edit").SetText(parcelTarget)
+        
+        if has_value(history, parcelTarget) == false and parcelTarget ~= mq.TLO.Me.CleanName() then
+            table.insert(history,parcelTarget)
+            mq.cmdf('/ini parcel.ini history "%s" 1', parcelTarget)
+        end
         return
     end
-
+    
     if mq.TLO.Window("MerchantWnd").Child("MW_Send_Button").Enabled() == false and mq.TLO.Window("MerchantWnd").Child("MW_Send_Button")() == "TRUE" then
         -- waiting for previous send to finish...
         status = "Waiting on send to finish..."
@@ -160,15 +196,13 @@ local function renderItems()
             bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.PreferSortDescending,
                 ImGuiTableColumnFlags.WidthStretch),
             150.0, ColumnID_Item)
-        ImGui.TableSetupColumn('', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0,
-            ColumnID_Remove)
         ImGui.TableSetupColumn('Sent', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0,
             ColumnID_Sent)
         ImGui.PopStyleColor()
         ImGui.TableHeadersRow()
         --ImGui.TableNextRow()
 
-        for idx, item in ipairs(parcelInv.items) do
+        for _, item in ipairs(parcelInv.items) do
             local currentItem = item.Item
             ImGui.TableNextColumn()
             animItems:SetTextureCell((tonumber(currentItem.Icon()) or 500) - 500)
@@ -178,19 +212,35 @@ local function renderItems()
                 currentItem.Inspect()
             end
             ImGui.TableNextColumn()
-            ImGui.PushStyleColor(ImGuiCol.Text, 0.8, 0.02, 0.02, 1.0)
-            ImGui.PushID("#_btn_" .. tostring(idx))
-            if ImGui.Selectable(ICONS.MD_REMOVE_CIRCLE_OUTLINE) then
-                table.remove(parcelInv.items, idx)
-            end
-            ImGui.PopID()
-            ImGui.PopStyleColor()
-            ImGui.TableNextColumn()
             ImGui.Text(item.Sent)
         end
 
         ImGui.EndTable()
     end
+end
+
+local COMBO_POPUP_FLAGS = bit32.bor(ImGuiWindowFlags.NoTitleBar, ImGuiWindowFlags.NoMove, ImGuiWindowFlags.NoResize, ImGuiWindowFlags.ChildWindow)
+local function popupcombo(label, current_value, options)
+    local result, changed = ImGui.InputText(label, current_value)
+    local active = ImGui.IsItemActive()
+    local activated = ImGui.IsItemActivated()
+    if activated then ImGui.OpenPopup('##combopopup'..label) end
+    local itemrectX, _ = ImGui.GetItemRectMin()
+    local _, itemRectY = ImGui.GetItemRectMax()
+    ImGui.SetNextWindowPos(itemrectX, itemRectY)
+    ImGui.SetNextWindowSize(ImVec2(200, 200))
+    if ImGui.BeginPopup('##combopopup'..label, COMBO_POPUP_FLAGS) then
+        for _,value in ipairs(options) do
+            if ImGui.Selectable(value) then
+                result = value
+            end
+        end
+        if changed or (not active and not ImGui.IsWindowFocused()) then
+            ImGui.CloseCurrentPopup()
+        end
+        ImGui.EndPopup()
+    end
+    return result
 end
 
 local function parcelGUI()
@@ -217,8 +267,10 @@ local function parcelGUI()
 
             ImGui.Text("Send To:      ")
             ImGui.SameLine()
-            local tmp_name, selected_name = ImGui.InputText("##Send To", parcelTarget, 0)
-            if selected_name then parcelTarget = tmp_name end
+            --local tmp_name, selected_name = ImGui.InputText("##Send To", parcelTarget, 0)
+            --if selected_name then parcelTarget = tmp_name end
+
+            parcelTarget = popupcombo('', parcelTarget, history)
 
             ImGui.Separator()
 
@@ -267,6 +319,7 @@ mq.bind("/parcel", function()
 end
 )
 
+read_history()
 findParcelVendor()
 
 parcelInv:createContainerInventory()
