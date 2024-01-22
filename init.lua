@@ -41,8 +41,9 @@ local function SaveSettings()
 end
 
 local function LoadSettings()
-    local config, err = loadfile(settings_path)
+    local config, err = loadfile(settings_file)
     if err or not config then
+        printf("\ayNo valid configuration found. Creating a new one: %s", settings_file)
         settings = {}
         SaveSettings()
     else
@@ -106,6 +107,12 @@ local function doParceling()
 
     if not startParcel then return end
 
+    settings.History = settings.History or {}
+    if not has_value(settings.History, parcelTarget) then
+        table.insert(settings.History, parcelTarget)
+        SaveSettings()
+    end
+
     if not nearestVendor then
         print("\arNo Parcel Vendor found in zone!")
         startParcel = false
@@ -144,12 +151,6 @@ local function doParceling()
     if mq.TLO.Window("MerchantWnd").Child("MW_Send_To_Edit").Text() ~= parcelTarget then
         status = "Setting Name to send to..."
         mq.TLO.Window("MerchantWnd").Child("MW_Send_To_Edit").SetText(parcelTarget)
-
-        settings.History = settings.History or {}
-        if not has_value(settings.History, parcelTarget) then
-            table.insert(settings.History, parcelTarget)
-            SaveSettings()
-        end
         return
     end
 
@@ -312,6 +313,7 @@ local function parcelGUI()
             if #parcelInv.items > 0 and parcelTarget:len() >= 4 then
                 if ImGui.Button(startParcel and "Cancel" or "Send", 150, 25) then
                     startParcel = not startParcel
+                    mq.cmdf("/nav stop")
                     parcelInv:resetState()
                 end
             end
