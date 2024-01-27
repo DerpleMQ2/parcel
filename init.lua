@@ -58,6 +58,24 @@ local function LoadSettings()
         SaveSettings()
     else
         settings = config()
+        local function getKeysSortedByValue(tbl, sortFunction)
+            local keys = {}
+            local newtbl = {}
+            for key in pairs(tbl) do
+                table.insert(keys, key)
+            end
+
+            table.sort(keys, function(a, b)
+                return sortFunction(tbl[a], tbl[b])
+                end)
+
+            for _, key in ipairs(keys) do
+                table.insert(newtbl, tbl[key])
+            end
+            return newtbl
+        end
+
+        settings.History = getKeysSortedByValue(settings.History, function(a, b) return a < b end)
     end
 end
 
@@ -119,7 +137,7 @@ local function doParceling()
 
     settings.History = settings.History or {}
     if not has_value(settings.History, parcelTarget) then
-        table.insert(settings.History, parcelTarget)
+        table.insert(settings.History, 1, parcelTarget)
         SaveSettings()
     end
 
