@@ -68,7 +68,7 @@ local function LoadSettings()
 
             table.sort(keys, function(a, b)
                 return sortFunction(tbl[a], tbl[b])
-                end)
+            end)
 
             for _, key in ipairs(keys) do
                 table.insert(newtbl, tbl[key])
@@ -93,7 +93,8 @@ local function findParcelVendor()
     local parcelSpawns = mq.getFilteredSpawns(function(spawn)
         return (string.find(spawn.Surname(), "Parcel") ~= nil) or
             (string.find(spawn.Surname(), "Parcel Services") ~= nil) or
-            (string.find(spawn.Name(), "Postmaster") ~= nil)
+            (string.find(spawn.Name(), "Postmaster") ~= nil) or
+            (string.find(spawn.Name(), "Hyredel") ~= nil)
     end)
 
     if #parcelSpawns <= 0 then
