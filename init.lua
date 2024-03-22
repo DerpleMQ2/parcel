@@ -76,6 +76,7 @@ local function LoadSettings()
             return newtbl
         end
 
+        settings.History = settings.History or {}
         settings.History = getKeysSortedByValue(settings.History, function(a, b) return a < b end)
     end
 
