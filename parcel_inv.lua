@@ -58,7 +58,6 @@ function parcel_inv:createContainerInventory()
         if slot.Container() and slot.Container() > 0 then
             local bagName = string.format("%s (%d)", slot.Name(), slot.ItemSlot() - inventoryOffset)
             table.insert(self.sendSources, { name = bagName, slot = slot, })
-            print(#self.sendSources)
         end
     end
 end
