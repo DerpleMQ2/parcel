@@ -49,7 +49,8 @@ function parcel_inv:new(additionalSource)
 end
 
 function parcel_inv:createContainerInventory()
-    self.sendSources = self.genericSources
+    self.sendSources = {}
+    for _, v in ipairs(self.genericSources) do table.insert(self.sendSources, v) end
     for _, v in ipairs(self.customSources) do table.insert(self.sendSources, v) end
 
     for i = 23, 34, 1 do
@@ -57,6 +58,7 @@ function parcel_inv:createContainerInventory()
         if slot.Container() and slot.Container() > 0 then
             local bagName = string.format("%s (%d)", slot.Name(), slot.ItemSlot() - inventoryOffset)
             table.insert(self.sendSources, { name = bagName, slot = slot, })
+            print(#self.sendSources)
         end
     end
 end
