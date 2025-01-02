@@ -96,6 +96,7 @@ local function findParcelVendor()
             (string.find(spawn.Surname(), "Parcel Services") ~= nil) or
             (string.find(spawn.Name(), "Postmaster") ~= nil) or
             (string.find(spawn.Name(), "A_Vendor_of_Reagents") ~= nil) or
+            (string.find(spawn.Name(), "Marius_Carver") ~= nil) or
             (string.find(spawn.Name(), "Hyredel") ~= nil)
     end)
 
