@@ -362,6 +362,7 @@ local function parcelGUI()
             renderItems()
         end
 
+        ImGui.PopStyleColor()
         ImGui.End()
     end
 end
