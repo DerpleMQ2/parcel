@@ -248,6 +248,7 @@ local function renderItems()
         --ImGui.TableNextRow()
 
         for idx, item in ipairs(parcelInv.items) do
+            ImGui.PushID("#_itm_" .. tostring(idx))
             local currentItem = item.Item
             ImGui.TableNextColumn()
             animItems:SetTextureCell((tonumber(currentItem.Icon()) or 500) - 500)
@@ -266,6 +267,7 @@ local function renderItems()
             ImGui.PopStyleColor()
             ImGui.TableNextColumn()
             ImGui.Text(item.Sent)
+            ImGui.PopID()
         end
 
         ImGui.EndTable()
