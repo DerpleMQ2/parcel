@@ -229,8 +229,16 @@ local function doParceling()
     end
 end
 
+local function tablelength(T)
+    local count = 0
+    for _ in pairs(T) do count = count + 1 end
+    return count
+  end
+
 local function renderItems()
-    ImGui.Text("Items to Send:")
+    ImGui.Text("Items to Send: ")
+    ImGui.SameLine()
+    ImGui.Text(tablelength(parcelInv.items))
     if ImGui.BeginTable("BagItemList", ColumnID_LAST, bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Borders)) then
         ImGui.PushStyleColor(ImGuiCol.Text, 0.8, 0, 1.0, 1)
         ImGui.TableSetupColumn('Icon', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0,
