@@ -92,12 +92,12 @@ end
 local function findParcelVendor()
     status = "Finding Nearest Parcel Vendor"
     local parcelSpawns = mq.getFilteredSpawns(function(spawn)
-        return (string.find(spawn.Surname(), "Parcel") ~= nil) or
-            (string.find(spawn.Surname(), "Parcel Services") ~= nil) or
-            (string.find(spawn.Name(), "Postmaster") ~= nil) or
-            (string.find(spawn.Name(), "A_Vendor_of_Reagents") ~= nil) or
-            (string.find(spawn.Name(), "Marius_Carver") ~= nil) or
-            (string.find(spawn.Name(), "Hyredel") ~= nil)
+        return (string.find(spawn.Surname() or "", "Parcel") ~= nil) or
+            (string.find(spawn.Surname() or "", "Parcel Services") ~= nil) or
+            (string.find(spawn.Name() or "", "Postmaster") ~= nil) or
+            (string.find(spawn.Name() or "", "A_Vendor_of_Reagents") ~= nil) or
+            (string.find(spawn.Name() or "", "Marius_Carver") ~= nil) or
+            (string.find(spawn.Name() or "", "Hyredel") ~= nil)
     end)
 
     if #parcelSpawns <= 0 then
@@ -230,7 +230,7 @@ local function doParceling()
 end
 
 local function renderItems()
-    ImGui.Text("Items to Send:")
+    ImGui.Text(string.format("Items to Send (%d):", #parcelInv.items or 0))
     if ImGui.BeginTable("BagItemList", ColumnID_LAST, bit32.bor(ImGuiTableFlags.Resizable, ImGuiTableFlags.Borders)) then
         ImGui.PushStyleColor(ImGuiCol.Text, 0.8, 0, 1.0, 1)
         ImGui.TableSetupColumn('Icon', bit32.bor(ImGuiTableColumnFlags.NoSort, ImGuiTableColumnFlags.WidthFixed), 20.0,
@@ -266,7 +266,13 @@ local function renderItems()
             ImGui.PopID()
             ImGui.PopStyleColor()
             ImGui.TableNextColumn()
+            if item.Sent == ICONS.MD_CLOUD_DONE then
+                ImGui.PushStyleColor(ImGuiCol.Text, 0.2, 0.8, 0.2, 1.0)
+            end
             ImGui.Text(item.Sent)
+            if item.Sent == ICONS.MD_CLOUD_DONE then
+                ImGui.PopStyleColor()
+            end
             ImGui.PopID()
         end
 
